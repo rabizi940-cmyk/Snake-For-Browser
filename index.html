@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Viper.io - Multiplayer Bot Arena</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0b0f19;
+            color: #ffffff;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: #0d111a;
+        }
+        /* Custom Animations */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
+        }
+        .glow-title {
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(139, 92, 246, 0.4);
+        }
+        .glow-red {
+            text-shadow: 0 0 25px rgba(239, 68, 68, 0.8), 0 0 50px rgba(220, 38, 38, 0.6);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="relative flex items-center justify-center">
+
+    <!-- CANVAS DE JOGO -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI: LOBBY TELA DE INÍCIO -->
+    <div id="lobbyScreen" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-panel w-full max-w-md p-8 rounded-3xl shadow-2xl flex flex-col items-center border border-slate-700/50 relative overflow-hidden">
+            <!-- Decoração de Fundo -->
+            <div class="absolute -top-24 -left-24 w-48 h-48 bg-blue-600/30 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/30 rounded-full blur-3xl pointer-events-none"></div>
+
+            <h1 class="text-5xl font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500 glow-title mb-2">
+                VIPER.IO
+            </h1>
+            <p class="text-slate-400 text-sm mb-6 font-medium">Batalha de Cobras Arena Bots</p>
+
+            <!-- Formulário -->
+            <div class="w-full space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Seu Nickname</label>
+                    <input type="text" id="playerNameInput" maxlength="14" placeholder="Digite seu nome..." 
+                        class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all font-semibold text-center">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Plataforma / Controles</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="btnPlatformPC" onclick="selectPlatform('pc')"
+                            class="flex flex-col items-center justify-center p-3 rounded-xl border border-blue-500 bg-blue-500/20 text-white font-semibold transition-all">
+                            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                            <span class="text-xs">PC (Setas / WASD)</span>
+                        </button>
+                        <button type="button" id="btnPlatformMobile" onclick="selectPlatform('mobile')"
+                            class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-400 font-semibold hover:border-slate-500 transition-all">
+                            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            <span class="text-xs">Celular (Touch HUD)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="startGame()" 
+                    class="w-full mt-4 py-4 rounded-xl font-black text-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/30 transform hover:-translate-y-0.5 active:translate-y-0 transition-all uppercase tracking-wider">
+                    Jogar Agora
+                </button>
+            </div>
+
+            <div class="mt-6 text-xs text-slate-500 text-center leading-relaxed">
+                <p>💡 <span class="font-semibold text-slate-400">Dica:</span> Segure <span class="text-blue-400">W</span>, <span class="text-blue-400">Espaço</span> ou o botão <span class="text-blue-400">Boost</span> no celular para acelerar!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI: HUD DURANTE O JOGO -->
+    <div id="gameHUD" class="hidden absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4">
+        <!-- Top Bar: Leaderboard & Stats -->
+        <div class="flex justify-between items-start w-full">
+            <!-- Pontuação Pessoal -->
+            <div class="glass-panel px-4 py-2 rounded-2xl border border-white/10 flex flex-col">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pontuação</span>
+                <span id="hudScore" class="text-2xl font-black text-blue-400">0</span>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="glass-panel p-3 rounded-2xl border border-white/10 min-w-[180px]">
+                <h3 class="text-xs font-extrabold text-amber-400 uppercase tracking-wider mb-2 border-b border-white/10 pb-1 flex justify-between items-center">
+                    <span>🏆 Top Cobras</span>
+                    <span class="text-[10px] text-slate-400">Viper.io</span>
+                </h3>
+                <ol id="leaderboardList" class="space-y-1 text-xs font-semibold">
+                    <!-- Preenchido via JS -->
+                </ol>
+            </div>
+        </div>
+
+        <!-- Minimapa & Controles Touch Mobile -->
+        <div class="flex justify-between items-end w-full">
+            <!-- Touch Joystick (Apenas Mobile) -->
+            <div id="touchJoystickContainer" class="pointer-events-auto relative w-32 h-32 rounded-full border-2 border-white/20 bg-slate-900/40 backdrop-blur-sm hidden touch-none flex items-center justify-center">
+                <div id="touchJoystickKnob" class="w-12 h-12 rounded-full bg-blue-500/80 border-2 border-white shadow-lg transform translate-x-0 translate-y-0 transition-transform ease-out duration-75"></div>
+            </div>
+
+            <!-- Minimapa & Botão Boost Mobile -->
+            <div class="flex items-end gap-4 ml-auto">
+                <!-- Botão Boost (Mobile) -->
+                <button id="touchBoostBtn" class="pointer-events-auto hidden w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-amber-600 text-white font-black text-sm border-2 border-white/40 shadow-lg active:scale-95 transition-transform flex flex-col items-center justify-center">
+                    <svg class="w-6 h-6 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span>BOOST</span>
+                </button>
+
+                <!-- Minimapa -->
+                <div class="glass-panel p-1 rounded-2xl border border-white/10 relative overflow-hidden">
+                    <canvas id="minimapCanvas" width="100" height="100" class="rounded-xl"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI: OVERLAY DE GAME OVER -->
+    <div id="gameOverScreen" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+        <div class="flex flex-col items-center text-center p-8 glass-panel rounded-3xl border border-red-500/30 max-w-sm w-full mx-4 fade-in">
+            <h2 class="text-5xl font-black tracking-widest text-red-500 uppercase glow-red mb-2 animate-pulse">
+                GAME OVER
+            </h2>
+            <p id="deathReason" class="text-slate-400 text-sm mb-6 font-medium">Sua cobra colidiu e virou poeira!</p>
+
+            <div class="w-full bg-slate-900/80 rounded-2xl p-4 border border-slate-800 mb-6 space-y-2">
+                <div class="flex justify-between text-sm font-semibold">
+                    <span class="text-slate-400">Pontuação Final:</span>
+                    <span id="finalScore" class="text-amber-400 font-bold">0</span>
+                </div>
+                <div class="flex justify-between text-sm font-semibold">
+                    <span class="text-slate-400">Comprimento Máx:</span>
+                    <span id="finalLength" class="text-blue-400 font-bold">0</span>
+                </div>
+            </div>
+
+            <button onclick="restartGame()" 
+                class="w-full py-4 rounded-xl font-black text-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg shadow-red-500/30 transform hover:-translate-y-0.5 active:translate-y-0 transition-all uppercase tracking-wider">
+                Jogar Novamente
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           CONFIGURAÇÕES GERAIS E ESTADO DO JOGO
+           ========================================================================== */
+        const WORLD_SIZE = 3600; // Tamanho do mapa (quadrado)
+        const BOT_COUNT = 30;    // Quantidade de cobras bots no mapa
+        const INITIAL_ORBS = 600;// Quantidade de comida inicial
+
+        // Nomes divertidos para os Bots
+        const BOT_NAMES = [
+            "ViperKing", "ShadowSnake", "Alpha", "ApexPredator", "NeonPython",
+            "MambaX", "Slayer", "Kaa", "GhostViper", "CobraKai", "Titan",
+            "CyberWorm", "Vortex", "Blaze", "Venom", "Hyperion", "Spectre",
+            "Draco", "Zenith", "Omega", "Phantom", "Eclipse", "Rogue"
+        ];
+
+        // Cores Vibrantes para as Cobras
+        const SNAKE_COLORS = [
+            { head: '#3b82f6', body: '#1d4ed8', glow: '#60a5fa' }, // Azul
+            { head: '#10b981', body: '#047857', glow: '#34d399' }, // Verde
+            { head: '#8b5cf6', body: '#6d28d9', glow: '#a78bfa' }, // Roxo
+            { head: '#f59e0b', body: '#b45309', glow: '#fbbf24' }, // Amarelo/Laranja
+            { head: '#ec4899', body: '#be185d', glow: '#f472b6' }, // Rosa
+            { head: '#06b6d4', body: '#0e7490', glow: '#22d3ee' }, // Ciano
+            { head: '#ef4444', body: '#b91c1c', glow: '#f87171' }  // Vermelho
+        ];
+
+        // Elementos DOM
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        const minimapCtx = minimapCanvas.getContext('2d');
+
+        // Estado do Usuário e Seleção de Plataforma
+        let selectedPlatform = 'pc'; // 'pc' ou 'mobile'
+        let playerName = "ViperPlayer";
+        let isGameRunning = false;
+
+        // Câmera do Jogo
+        let camera = { x: 0, y: 0 };
+
+        // Entidades do Jogo
+        let playerSnake = null;
+        let snakes = [];
+        let foodOrbs = [];
+        let particles = [];
+
+        // Controle de Entrada (Input State)
+        const keys = {};
+        let mousePos = { x: 0, y: 0 };
+        let touchTargetAngle = null;
+        let isBoosting = false;
+
+        // Variáveis do Joystick Touch
+        let joystickActive = false;
+        let joystickCenter = { x: 0, y: 0 };
+        let joystickPos = { x: 0, y: 0 };
+
+        /* ==========================================================================
+           SELEÇÃO DE PLATAFORMA & CONTROLES
+           ========================================================================== */
+        function selectPlatform(platform) {
+            selectedPlatform = platform;
+            const btnPC = document.getElementById('btnPlatformPC');
+            const btnMobile = document.getElementById('btnPlatformMobile');
+
+            if (platform === 'pc') {
+                btnPC.className = "flex flex-col items-center justify-center p-3 rounded-xl border border-blue-500 bg-blue-500/20 text-white font-semibold transition-all";
+                btnMobile.className = "flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-400 font-semibold hover:border-slate-500 transition-all";
+            } else {
+                btnMobile.className = "flex flex-col items-center justify-center p-3 rounded-xl border border-blue-500 bg-blue-500/20 text-white font-semibold transition-all";
+                btnPC.className = "flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-400 font-semibold hover:border-slate-500 transition-all";
+            }
+        }
+
+        /* ==========================================================================
+           CLASSES DO JOGO (ORB, PARTÍCULAS, SNAKE)
+           ========================================================================== */
+
+        // Esferas de Comida (Orbes)
+        class FoodOrb {
+            constructor(x, y, value = 1, isDeathDrop = false, color = null) {
+                this.x = x || Math.random() * (WORLD_SIZE - 100) + 50;
+                this.y = y || Math.random() * (WORLD_SIZE - 100) + 50;
+                this.value = value;
+                this.radius = isDeathDrop ? Math.min(10, 4 + value * 0.5) : Math.random() * 2 + 3;
+                this.isDeathDrop = isDeathDrop;
+                this.color = color || `hsl(${Math.random() * 360}, 100%, 65%)`;
+                this.pulse = Math.random() * Math.PI * 2;
+            }
+
+            draw(ctx) {
+                this.pulse += 0.05;
+                const r = this.radius + Math.sin(this.pulse) * (this.isDeathDrop ? 1.5 : 0.5);
+
+                ctx.save();
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = this.isDeathDrop ? 12 : 6;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x - camera.x, this.y - camera.y, Math.max(1, r), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Partículas Visuais (Para aceleração e morte)
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 3;
+                this.vy = (Math.random() - 0.5) * 3;
+                this.radius = Math.random() * 3 + 2;
+                this.alpha = 1;
+                this.color = color;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.03;
+            }
+
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Classe Principal da Cobra
+        class Snake {
+            constructor(id, name, isBot = false, colorScheme = null) {
+                this.id = id;
+                this.name = name;
+                this.isBot = isBot;
+                this.color = colorScheme || SNAKE_COLORS[Math.floor(Math.random() * SNAKE_COLORS.length)];
+
+                // Posição de respawn
+                this.x = Math.random() * (WORLD_SIZE - 400) + 200;
+                this.y = Math.random() * (WORLD_SIZE - 400) + 200;
+                this.angle = Math.random() * Math.PI * 2;
+                this.targetAngle = this.angle;
+
+                // Propriedades Físicas
+                this.speed = 3.2;
+                this.baseSpeed = 3.2;
+                this.boostSpeed = 6.0;
+                this.turnSpeed = 0.09;
+                this.radius = 12; // Largura do corpo
+                this.score = 0;
+                this.isBoosting = false;
+                this.isDead = false;
+
+                // Segmentos do Corpo
+                this.segments = [];
+                const initialLength = 20;
+                for (let i = 0; i < initialLength; i++) {
+                    this.segments.push({
+                        x: this.x - i * 3 * Math.cos(this.angle),
+                        y: this.y - i * 3 * Math.sin(this.angle)
+                    });
+                }
+
+                // IA dos Bots
+                this.botTargetOrb = null;
+                this.botChangeDirTimer = 0;
+            }
+
+            update() {
+                if (this.isDead) return;
+
+                // Lógica de Direção e Velocidade (Bot vs Player)
+                if (this.isBot) {
+                    this.updateBotLogic();
+                } else {
+                    this.updatePlayerLogic();
+                }
+
+                // Curva Suave em direção ao targetAngle
+                let diff = this.targetAngle - this.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                this.angle += diff * this.turnSpeed;
+
+                // Gerenciamento do Boost / Aceleração
+                if (this.isBoosting && this.segments.length > 12) {
+                    this.speed = this.boostSpeed;
+                    // Perde massa ao acelerar
+                    if (Math.random() < 0.3) {
+                        const tail = this.segments[this.segments.length - 1];
+                        foodOrbs.push(new FoodOrb(
+                            tail.x + (Math.random() - 0.5) * 10,
+                            tail.y + (Math.random() - 0.5) * 10,
+                            1,
+                            false
+                        ));
+                        this.segments.pop();
+                        this.score = Math.max(0, this.score - 1);
+                    }
+                    // Partícula de rastro de fogo
+                    if (Math.random() < 0.5) {
+                        particles.push(new Particle(this.x, this.y, this.color.glow));
+                    }
+                } else {
+                    this.speed = this.baseSpeed;
+                }
+
+                // Ajusta raio da cobra com base na pontuação/tamanho
+                this.radius = Math.min(26, 12 + Math.floor(this.score / 150));
+
+                // Mover Cabeça
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                // Limites do Mundo (Paredes)
+                if (this.x < 50 || this.x > WORLD_SIZE - 50 || this.y < 50 || this.y > WORLD_SIZE - 50) {
+                    this.die("Colidiu com os limites do mapa!");
+                    return;
+                }
+
+                // Atualizar Posição dos Segmentos do Corpo
+                this.segments.unshift({ x: this.x, y: this.y });
+
+                // Mantém o comprimento proporcional ao número de segmentos
+                const targetSegmentCount = Math.floor(20 + this.score / 8);
+                while (this.segments.length > targetSegmentCount) {
+                    this.segments.pop();
+                }
+
+                // Coletar Orbes de Comida
+                this.checkFoodCollisions();
+            }
+
+            updatePlayerLogic() {
+                // Boost por teclado/touch
+                this.isBoosting = isBoosting || keys['w'] || keys['W'] || keys[' '];
+
+                if (selectedPlatform === 'mobile' && touchTargetAngle !== null) {
+                    this.targetAngle = touchTargetAngle;
+                } else {
+                    // Controles para PC (Mouse ou Setas)
+                    if (keys['ArrowLeft'] || keys['a'] || keys['A']) this.targetAngle -= 0.08;
+                    if (keys['ArrowRight'] || keys['d'] || keys['D']) this.targetAngle += 0.08;
+
+                    // Direcionamento pelo Mouse (se movido)
+                    if (mousePos.x !== 0 || mousePos.y !== 0) {
+                        const screenCenterX = canvas.width / 2;
+                        const screenCenterY = canvas.height / 2;
+                        const dx = mousePos.x - screenCenterX;
+                        const dy = mousePos.y - screenCenterY;
+                        if (Math.hypot(dx, dy) > 20) {
+                            this.targetAngle = Math.atan2(dy, dx);
+                        }
+                    }
+                }
+            }
+
+            updateBotLogic() {
+                this.botChangeDirTimer--;
+
+                // Evitar bordas do mapa
+                const margin = 200;
+                if (this.x < margin || this.x > WORLD_SIZE - margin || this.y < margin || this.y > WORLD_SIZE - margin) {
+                    const angleToCenter = Math.atan2(WORLD_SIZE / 2 - this.y, WORLD_SIZE / 2 - this.x);
+                    this.targetAngle = angleToCenter;
+                    return;
+                }
+
+                // Desviar de outras cobras (Evitar colisão frontal)
+                let hazardDetected = false;
+                for (let other of snakes) {
+                    if (other.id === this.id || other.isDead) continue;
+                    // Checa distância dos segmentos da outra cobra
+                    for (let i = 0; i < other.segments.length; i += 3) {
+                        const seg = other.segments[i];
+                        const dist = Math.hypot(this.x - seg.x, this.y - seg.y);
+                        if (dist < this.radius + 40) {
+                            // Virar na direção oposta ao obstáculo
+                            const avoidAngle = Math.atan2(this.y - seg.y, this.x - seg.x);
+                            this.targetAngle = avoidAngle + (Math.random() - 0.5) * 0.5;
+                            this.isBoosting = dist < 25; // Boost para escapar se muito perto
+                            hazardDetected = true;
+                            break;
+                        }
+                    }
+                    if (hazardDetected) break;
+                }
+
+                // Se não há perigo, procurar comida
+                if (!hazardDetected) {
+                    if (this.botChangeDirTimer <= 0 || !this.botTargetOrb) {
+                        this.botChangeDirTimer = Math.floor(Math.random() * 60) + 30;
+                        this.isBoosting = Math.random() < 0.15; // Ocasionalmente aciona boost
+
+                        // Encontrar orbe de comida mais próximo
+                        let closestDist = 400;
+                        let closestOrb = null;
+                        for (let orb of foodOrbs) {
+                            const d = Math.hypot(this.x - orb.x, this.y - orb.y);
+                            if (d < closestDist) {
+                                closestDist = d;
+                                closestOrb = orb;
+                            }
+                        }
+                        this.botTargetOrb = closestOrb;
+                    }
+
+                    if (this.botTargetOrb) {
+                        this.targetAngle = Math.atan2(this.botTargetOrb.y - this.y, this.botTargetOrb.x - this.x);
+                    }
+                }
+            }
+
+            checkFoodCollisions() {
+                for (let i = foodOrbs.length - 1; i >= 0; i--) {
+                    const orb = foodOrbs[i];
+                    const dist = Math.hypot(this.x - orb.x, this.y - orb.y);
+                    if (dist < this.radius + orb.radius + 4) {
+                        this.score += orb.value;
+                        foodOrbs.splice(i, 1);
+                    }
+                }
+            }
+
+            die(reason = "Você morreu!") {
+                if (this.isDead) return;
+                this.isDead = true;
+
+                // Transforma segmentos do corpo em comida valiosa
+                for (let i = 0; i < this.segments.length; i += 2) {
+                    const seg = this.segments[i];
+                    foodOrbs.push(new FoodOrb(
+                        seg.x + (Math.random() - 0.5) * 15,
+                        seg.y + (Math.random() - 0.5) * 15,
+                        Math.floor(Math.random() * 3) + 2,
+                        true,
+                        this.color.glow
+                    ));
+                    // Partículas de explosão na morte
+                    for (let p = 0; p < 2; p++) {
+                        particles.push(new Particle(seg.x, seg.y, this.color.glow));
+                    }
+                }
+
+                // Se for o jogador humano, disparar Game Over
+                if (!this.isBot) {
+                    triggerGameOver(reason);
+                }
+            }
+
+            draw(ctx) {
+                if (this.isDead || this.segments.length < 2) return;
+
+                ctx.save();
+
+                // Desenhar Segmentos do Corpo (da cauda para a cabeça)
+                for (let i = this.segments.length - 1; i >= 0; i--) {
+                    const seg = this.segments[i];
+                    const renderRadius = Math.max(2, this.radius - (i / this.segments.length) * 4);
+
+                    ctx.shadowColor = this.color.glow;
+                    ctx.shadowBlur = i === 0 ? 12 : 4;
+
+                    ctx.fillStyle = i % 2 === 0 ? this.color.head : this.color.body;
+                    ctx.beginPath();
+                    ctx.arc(seg.x - camera.x, seg.y - camera.y, renderRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Desenhar Olhos na Cabeça
+                const head = this.segments[0];
+                const eyeOffset = this.radius * 0.5;
+                const eyeRadius = Math.max(2, this.radius * 0.25);
+
+                const leftEyeX = head.x + Math.cos(this.angle - 0.5) * eyeOffset;
+                const leftEyeY = head.y + Math.sin(this.angle - 0.5) * eyeOffset;
+                const rightEyeX = head.x + Math.cos(this.angle + 0.5) * eyeOffset;
+                const rightEyeY = head.y + Math.sin(this.angle + 0.5) * eyeOffset;
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(leftEyeX - camera.x, leftEyeY - camera.y, eyeRadius, 0, Math.PI * 2);
+                ctx.arc(rightEyeX - camera.x, rightEyeY - camera.y, eyeRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pupilas
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(leftEyeX - camera.x, leftEyeY - camera.y, eyeRadius * 0.5, 0, Math.PI * 2);
+                ctx.arc(rightEyeX - camera.x, rightEyeY - camera.y, eyeRadius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Desenhar Nome da Cobra acima da cabeça
+                ctx.shadowBlur = 0;
+                ctx.font = 'bold 12px Outfit, sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.name, head.x - camera.x, head.y - camera.y - this.radius - 8);
+
+                ctx.restore();
+            }
+        }
+
+        /* ==========================================================================
+           LÓGICA DE COLISÃO MULTIPLAYER (CABEÇA vs CORPO)
+           ========================================================================== */
+        function checkSnakeCollisions() {
+            for (let snake of snakes) {
+                if (snake.isDead) continue;
+
+                const head = snake.segments[0];
+
+                for (let other of snakes) {
+                    if (other.isDead) continue;
+
+                    // Se for a mesma cobra, checa colisão apenas com a própria cauda distante
+                    const startIdx = (other.id === snake.id) ? 8 : 0;
+
+                    for (let i = startIdx; i < other.segments.length; i++) {
+                        const seg = other.segments[i];
+                        const dist = Math.hypot(head.x - seg.x, head.y - seg.y);
+
+                        // Colisão da Cabeça de 'snake' com o segmento de 'other'
+                        if (dist < snake.radius * 0.8 + other.radius * 0.8) {
+                            const reason = other.id === snake.id ? "Colidiu com o próprio corpo!" : `Colidiu com ${other.name}!`;
+                            snake.die(reason);
+                            break;
+                        }
+                    }
+                    if (snake.isDead) break;
+                }
+            }
+        }
+
+        /* ==========================================================================
+           REPOSIÇÃO DE BOTS E COMIDA
+           ========================================================================== */
+        function maintainWorldEntities() {
+            // Repor Comida
+            while (foodOrbs.length < INITIAL_ORBS) {
+                foodOrbs.push(new FoodOrb());
+            }
+
+            // Repor Bots Mortos
+            snakes = snakes.filter(s => !s.isDead);
+
+            let botIndex = 0;
+            while (snakes.length < BOT_COUNT + (playerSnake && !playerSnake.isDead ? 1 : 0)) {
+                const randomName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + "_" + Math.floor(Math.random() * 99);
+                snakes.push(new Snake(`bot_${Date.now()}_${botIndex++}`, randomName, true));
+            }
+        }
+
+        /* ==========================================================================
+           RENDERIZAÇÃO DO MAPA & GRID
+           ========================================================================== */
+        function drawBackgroundGrid() {
+            const gridSize = 80;
+            const startX = Math.floor(camera.x / gridSize) * gridSize;
+            const startY = Math.floor(camera.y / gridSize) * gridSize;
+
+            ctx.save();
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+
+            for (let x = startX; x < camera.x + canvas.width + gridSize; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x - camera.x, 0);
+                ctx.lineTo(x - camera.x, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = startY; y < camera.y + canvas.height + gridSize; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y - camera.y);
+                ctx.lineTo(canvas.width, y - camera.y);
+                ctx.stroke();
+            }
+
+            // Desenhar Paredes/Limites do Mundo
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 8;
+            ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = 15;
+            ctx.strokeRect(-camera.x, -camera.y, WORLD_SIZE, WORLD_SIZE);
+            ctx.restore();
+        }
+
+        /* ==========================================================================
+           MINIMAPA E LEADERBOARD HUD
+           ========================================================================== */
+        function updateHUD() {
+            if (!playerSnake) return;
+
+            // Pontuação Pessoal
+            document.getElementById('hudScore').innerText = playerSnake.score;
+
+            // Leaderboard (Top 5)
+            const sortedSnakes = [...snakes].sort((a, b) => b.score - a.score).slice(0, 5);
+            const leaderboardList = document.getElementById('leaderboardList');
+            leaderboardList.innerHTML = '';
+
+            sortedSnakes.forEach((s, idx) => {
+                const li = document.createElement('li');
+                const isPlayer = s.id === playerSnake.id;
+                li.className = `flex justify-between items-center ${isPlayer ? 'text-blue-400 font-bold' : 'text-slate-300'}`;
+                li.innerHTML = `
+                    <span class="truncate max-w-[110px]">${idx + 1}. ${s.name}</span>
+                    <span class="font-bold text-amber-400 ml-2">${s.score}</span>
+                `;
+                leaderboardList.appendChild(li);
+            });
+
+            // Minimapa Render
+            minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+            const scale = minimapCanvas.width / WORLD_SIZE;
+
+            // Fundo minimapa
+            minimapCtx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            minimapCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+
+            // Desenhar cobras no minimapa
+            snakes.forEach(s => {
+                if (s.isDead) return;
+                minimapCtx.fillStyle = s.id === playerSnake.id ? '#60a5fa' : s.color.head;
+                minimapCtx.beginPath();
+                minimapCtx.arc(s.x * scale, s.y * scale, s.id === playerSnake.id ? 3 : 1.5, 0, Math.PI * 2);
+                minimapCtx.fill();
+            });
+        }
+
+        /* ==========================================================================
+           LOOP PRINCIPAL DE JOGO (GAME LOOP - 60 FPS)
+           ========================================================================== */
+        function gameLoop() {
+            if (!isGameRunning) return;
+
+            // 1. Atualizar Câmera Suavemente em relação ao Jogador Humano
+            if (playerSnake && !playerSnake.isDead) {
+                camera.x = playerSnake.x - canvas.width / 2;
+                camera.y = playerSnake.y - canvas.height / 2;
+            }
+
+            // 2. Limpar Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 3. Desenhar Fundo & Grades
+            drawBackgroundGrid();
+
+            // 4. Atualizar e Desenhar Orbes
+            foodOrbs.forEach(orb => orb.draw(ctx));
+
+            // 5. Atualizar e Desenhar Cobras
+            snakes.forEach(snake => {
+                snake.update();
+                snake.draw(ctx);
+            });
+
+            // 6. Atualizar e Desenhar Partículas
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw(ctx);
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // 7. Processar Colisões e Estado da Arena
+            checkSnakeCollisions();
+            maintainWorldEntities();
+
+            // 8. Atualizar Elementos de Interface (HUD)
+            updateHUD();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* ==========================================================================
+           EVENTOS DE CONTROLE & INTERAÇÃO (PC & TOUCH MOBILE)
+           ========================================================================== */
+
+        // Ajuste dinâmico de tamanho do Canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Teclado (PC)
+        window.addEventListener('keydown', (e) => keys[e.key] = true);
+        window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        // Mouse (PC)
+        window.addEventListener('mousemove', (e) => {
+            mousePos.x = e.clientX;
+            mousePos.y = e.clientY;
+        });
+
+        // Configuração de Controles Touch Mobile Joystick
+        const joystickContainer = document.getElementById('touchJoystickContainer');
+        const joystickKnob = document.getElementById('touchJoystickKnob');
+        const boostBtn = document.getElementById('touchBoostBtn');
+
+        function setupMobileControls() {
+            if (selectedPlatform === 'mobile') {
+                joystickContainer.classList.remove('hidden');
+                boostBtn.classList.remove('hidden');
+            } else {
+                joystickContainer.classList.add('hidden');
+                boostBtn.classList.add('hidden');
+            }
+        }
+
+        // Eventos Touch Joystick
+        joystickContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            joystickActive = true;
+            const rect = joystickContainer.getBoundingClientRect();
+            joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+            handleJoystickMove(e.touches[0]);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!joystickActive) return;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].target === joystickContainer || joystickContainer.contains(e.touches[i].target)) {
+                    handleJoystickMove(e.touches[i]);
+                    break;
+                }
+            }
+        }, { passive: false });
+
+        function handleJoystickMove(touch) {
+            const dx = touch.clientX - joystickCenter.x;
+            const dy = touch.clientY - joystickCenter.y;
+            const dist = Math.hypot(dx, dy);
+            const maxRadius = 40;
+
+            const angle = Math.atan2(dy, dx);
+            touchTargetAngle = angle;
+
+            const knobDist = Math.min(dist, maxRadius);
+            const knobX = Math.cos(angle) * knobDist;
+            const knobY = Math.sin(angle) * knobDist;
+
+            joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+        }
+
+        function resetJoystick() {
+            joystickActive = false;
+            joystickKnob.style.transform = `translate(0px, 0px)`;
+        }
+
+        window.addEventListener('touchend', resetJoystick);
+        window.addEventListener('touchcancel', resetJoystick);
+
+        // Eventos Touch Boost Button
+        boostBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isBoosting = true;
+        });
+        boostBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isBoosting = false;
+        });
+
+        /* ==========================================================================
+           CONTROLE DO FLUXO DO JOGO (START, GAME OVER, RESTART)
+           ========================================================================== */
+
+        function startGame() {
+            const nameInput = document.getElementById('playerNameInput').value.trim();
+            playerName = nameInput.length > 0 ? nameInput : "ViperPlayer";
+
+            document.getElementById('lobbyScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('gameHUD').classList.remove('hidden');
+
+            setupMobileControls();
+            resizeCanvas();
+
+            // Reset de estado
+            snakes = [];
+            foodOrbs = [];
+            particles = [];
+
+            // Instanciar Jogador
+            playerSnake = new Snake('player_1', playerName, false, SNAKE_COLORS[0]);
+            snakes.push(playerSnake);
+
+            // Gerar Bots e Comida Inicial
+            for (let i = 0; i < BOT_COUNT; i++) {
+                const name = BOT_NAMES[i % BOT_NAMES.length] + "_" + Math.floor(Math.random() * 99);
+                snakes.push(new Snake(`bot_${i}`, name, true));
+            }
+            maintainWorldEntities();
+
+            isGameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function triggerGameOver(reason) {
+            isGameRunning = false;
+            document.getElementById('deathReason').innerText = reason;
+            document.getElementById('finalScore').innerText = playerSnake ? playerSnake.score : 0;
+            document.getElementById('finalLength').innerText = playerSnake ? playerSnake.segments.length : 0;
+
+            setTimeout(() => {
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }, 300);
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            startGame();
+        }
+
+        // Inicializar resolução do canvas na carga da página
+        window.onload = () => {
+            resizeCanvas();
+        };
+    </script>
+</body>
+</html>
